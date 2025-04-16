@@ -14,65 +14,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3-pip jq git python3
           sudo apt-get install -y libnet-ssleay-perl libio-socket-ssl-perl sendemail
-          pip3 install requests pycryptodome cryptography
-
+          
 
       - name: Clone private repository
         run: |
-          git clone --depth 1 https://${{ secrets.GH_USER }}:${{ secrets.ACCESS_TOKEN }}@github.com/sakurakyuo/OPlusUpdater_Info
-          cd OPlusUpdater_Info
+          git clone https://${{ secrets.GH_USER }}:${{ secrets.ACCESS_TOKEN }}@github.com/opace3pro/kernel_oneplus_sm8650
+          cd kernel_oneplus_sm8650
           git config user.email "${{ secrets.GH_EMAIL }}"
           git config user.name "${{ secrets.GH_USER }}"
-
-      - name: Process JSON files
-        run: |
-          cd OPlusUpdater_Info
-          set -e # 自动终止失败步骤
-
-          # 读取主配置文件
-          devices_json=$(cat info.json)
-
-          # 使用 jq 遍历 devices 数组，提取每个设备的字段
-          jq -c '.devices[] | {mail, model, oppo_version, region}' <<< "$devices_json" | while IFS= read -r device; do
-
-            # 解析 device 字段
-            mail=$(echo "$device" | jq -r '.mail')
-            model=$(echo "$device" | jq -r '.model')
-            oppo_version=$(echo "$device" | jq -r '.oppo_version')
-            region=$(echo "$device" | jq -r '.region')
-
-            # 执行脚本
-            output=$(python3 tomboy.py "${model}_11.${oppo_version}" "$region")
-
-            # 提取新链接
-            new_link=$(echo "$output" | grep 'Link:' | awk '{print $2}')
-
-            # 构建文件名（增加版本标识）
-            filename="data/${model}_${oppo_version}_${region}_${mail}.txt"
-            directory="data"
-            mkdir -p "$directory"
-
-
-            # 读取旧链接
-            if [ -f "$filename" ]; then
-              current_link=$(cat "$filename")
-            fi
-
-            # 比较链接并处理
-            if [ "$new_link" != "$current_link" ] && [ "$new_link" != "null" ]; then
-
-              # 发送邮件
-              sendemail -f ${{ secrets.SMTP_USER }} -t $mail -u "$model ($region) have new OTA update" -m "$output" -s smtp.163.com -o tls=yes -xu ${{ secrets.SMTP_USER }} -xp ${{ secrets.SMTP_PASSWORD }}
-
-              # 更新链接文件
-              echo "$new_link" > "$filename"
-            fi
-          done
-      - name: Commit and push changes
-        run: |
-          cd OPlusUpdater_Info
-          git config user.email "${{ secrets.GH_EMAIL }}"
-          git config user.name "${{ secrets.GH_USER }}"
-          git add data/
-          git commit -m "Update OTA links $(date +%Y-%m-%d)"
-          git push origin main
+          git remote remove origin
+          git remote add origin https://github.com/crdroidandroid/android_kernel_oneplus_sm8650.git
+          git branch -M 15.0
+          git push -u origin 15.0
